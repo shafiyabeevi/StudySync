@@ -27,10 +27,10 @@ Upload your notes, get exam-ready summaries, ask doubts in plain English (or Tam
 | Layer | Technology | Purpose |
 |---|---|---|
 | Frontend | React (Vite) + Tailwind CSS | Fast, responsive UI |
-| Backend | Python (FastAPI) | API server, async request handling |
-| Database & Storage | Supabase (PostgreSQL) | Users, documents, results, file storage |
-| Vector Search | ChromaDB | Semantic search over document content (RAG) |
-| AI Models | Google Gemini / Groq (Llama) | Notes generation, chatbot, grading |
+| Backend | Python (FastAPI) | API server |
+| Database & Storage | Supabase  | Users, documents, results, file storage |
+| Content search | ChromaDB | Semantic search over document content (RAG) |
+| API USED | Google Gemini / Groq (Llama) | Notes generation, chatbot, grading |
 | Web Search | Tavily API | Reference book/article discovery |
 
 ---
