@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import axios from 'axios';
+import api from '../lib/api';
 import { Search, Loader2, BookOpen, ExternalLink, GraduationCap, Video, Globe } from 'lucide-react';
 
 const ReferencesPage = () => {
@@ -19,7 +19,7 @@ const ReferencesPage = () => {
     setResults([]);
 
     try {
-      const response = await axios.post('/api/search-references', { topic: query.trim() });
+      const response = await api.post('/api/search-references', { topic: query.trim() });
       setResults(response.data.results || []);
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to search for references. Please try again.');

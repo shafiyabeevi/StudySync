@@ -1,8 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import axios from 'axios';
+import api from '../lib/api';
 import ReactMarkdown from 'react-markdown';
 import { MessageSquare, X, Send, User, Bot, Sparkles } from 'lucide-react';
-import FeedbackWidget from './FeedbackWidget';
 
 const ChatWidget = ({ documentId }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -33,7 +32,7 @@ const ChatWidget = ({ documentId }) => {
     setIsTyping(true);
 
     try {
-      const response = await axios.post('/api/chat', {
+      const response = await api.post('/api/chat', {
         document_id: documentId,
         message: userMessage.content,
         chat_history: chatHistorySnapshot.filter(m => m.role !== 'system') // send previous messages
@@ -104,9 +103,6 @@ const ChatWidget = ({ documentId }) => {
                 <span className="text-[10px] text-[#7a6150] mt-2 flex justify-end opacity-70 font-mono">
                   {msg.language.toUpperCase()} response generated
                 </span>
-              )}
-              {msg.role === 'assistant' && (
-                <FeedbackWidget featureType="chatbot" referenceId={documentId} />
               )}
             </div>
           </div>

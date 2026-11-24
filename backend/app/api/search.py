@@ -2,7 +2,8 @@
 Reference search API endpoint.
 Uses Tavily to find academic books and resources.
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from app.core.auth import AuthenticatedUser, get_current_user
 from app.services.reference_search import search_references
 from app.schemas.models import SearchRequest, SearchResponse, ReferenceResult, ErrorResponse
 import logging
@@ -16,7 +17,10 @@ router = APIRouter()
     response_model=SearchResponse,
     responses={400: {"model": ErrorResponse}, 500: {"model": ErrorResponse}},
 )
-async def search(request: SearchRequest):
+async def search(
+    request: SearchRequest,
+    _user: AuthenticatedUser = Depends(get_current_user),
+):
     """
     Search for reference books and academic resources on a topic.
     Returns deduplicated results from trusted academic sources.

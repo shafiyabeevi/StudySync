@@ -4,7 +4,7 @@ Main application entry point.
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import upload, documents, chat, search, feedback, teach_it_back
+from app.api import upload, documents, chat, search, teach_it_back, upgrade_me
 import logging
 
 # Configure logging
@@ -38,8 +38,8 @@ app.include_router(upload.router, prefix="/api", tags=["Upload"])
 app.include_router(documents.router, prefix="/api", tags=["Documents"])
 app.include_router(chat.router, prefix="/api", tags=["Chat"])
 app.include_router(search.router, prefix="/api", tags=["Search"])
-app.include_router(feedback.router, prefix="/api", tags=["Feedback"])
 app.include_router(teach_it_back.router, prefix="/api", tags=["Teach It Back"])
+app.include_router(upgrade_me.router, prefix="/api", tags=["Upgrade Me"])
 
 
 @app.get("/api/health")

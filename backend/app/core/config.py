@@ -20,13 +20,9 @@ class Settings(BaseSettings):
     # App config
     MAX_FILE_SIZE_MB: int = 20
     CHROMA_PERSIST_DIR: str = "./chroma_data"
+    SUPABASE_STORAGE_BUCKET: str = "STUDYSYNC"
     ALLOWED_FILE_TYPES: list[str] = ["application/pdf",
                                       "application/vnd.openxmlformats-officedocument.wordprocessingml.document"]
-
-    # Placeholder user_id for single-user mode.
-    # When Supabase Auth is added later, this will be replaced
-    # by extracting user_id from the JWT token.
-    DEFAULT_USER_ID: str = "00000000-0000-0000-0000-000000000001"
 
     model_config = {
         "env_file": os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "..", ".env"),

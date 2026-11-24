@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../lib/api';
 import { Loader2, BrainCircuit, Sparkles, BookOpen, KeyRound, Lightbulb } from 'lucide-react';
-import FeedbackWidget from './FeedbackWidget';
 
 const ExamNotes = ({ documentId }) => {
   const [notes, setNotes] = useState(null);
@@ -11,7 +10,7 @@ const ExamNotes = ({ documentId }) => {
   useEffect(() => {
     const fetchNotes = async () => {
       try {
-        const response = await axios.get(`/api/documents/${documentId}/notes`);
+        const response = await api.get(`/api/documents/${documentId}/notes`);
         if (response.data.notes) {
           setNotes(response.data.notes);
         } else if (response.data.status !== 'ready') {
@@ -138,7 +137,6 @@ const ExamNotes = ({ documentId }) => {
             </ul>
           </div>
         )}
-        <FeedbackWidget featureType="exam_notes" referenceId={documentId} />
       </div>
     </div>
   );

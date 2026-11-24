@@ -3,14 +3,12 @@ RAG-based chatbot service with multilingual support.
 Retrieves relevant document context and answers student questions,
 responding in whichever language the student requests.
 """
-import asyncio
 import os
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_groq import ChatGroq
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from app.core.config import get_settings
 from app.services.vector_store import retrieve_relevant_chunks
-from app.services.heatmap import log_doubt_question
 import logging
 
 logger = logging.getLogger(__name__)
@@ -76,12 +74,6 @@ def _get_groq_llm():
     )
 
 
-async def _background_log_doubt_questions(document_id: str, chunks: list[str]) -> None:
-    for chunk in chunks:
-        if chunk and chunk.strip():
-            log_doubt_question(document_id, chunk)
-
-
 async def chat_with_document(
     document_id: str,
     user_message: str,
@@ -96,7 +88,6 @@ async def chat_with_document(
 
     if relevant_chunks:
         context = "\n\n---\n\n".join(relevant_chunks)
-        asyncio.create_task(_background_log_doubt_questions(document_id, relevant_chunks))
     else:
         context = "(No specific context found in the document for this question. Answer based on general knowledge.)"
 

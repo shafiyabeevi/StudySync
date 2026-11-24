@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import axios from 'axios';
+import api from '../lib/api';
 import { BookOpen, Mic, MicOff, Sparkles, TrendingUp } from 'lucide-react';
-import FeedbackWidget from './FeedbackWidget';
 
 const TeachItBack = ({ documentId }) => {
   const [topic, setTopic] = useState('Main Topic');
@@ -45,7 +44,7 @@ const TeachItBack = ({ documentId }) => {
   useEffect(() => {
     const fetchAttempts = async () => {
       try {
-        const response = await axios.get(`/api/teach-it-back/${documentId}`, { params: { topic } });
+        const response = await api.get(`/api/teach-it-back/${documentId}`, { params: { topic } });
         setAttempts(response.data.attempts || []);
       } catch (err) {
         console.error(err);
@@ -63,26 +62,19 @@ const TeachItBack = ({ documentId }) => {
     setError('');
 
     try {
-      let response;
-      try {
-        response = await axios.post('/api/teach-it-back', {
-          document_id: documentId,
-          topic,
-          student_explanation: explanation,
-        });
-      } catch (err) {
-        // Fallback to backend host when dev proxy isn't available
-        response = await axios.post('http://127.0.0.1:8000/api/teach-it-back', {
-          document_id: documentId,
-          topic,
-          student_explanation: explanation,
-        });
-      }
+      const response = await api.post('/api/teach-it-back', {
+        document_id: documentId,
+        topic,
+        student_explanation: explanation,
+      });
       setResult(response.data);
-      const attemptsResponse = await axios.get(`/api/teach-it-back/${documentId}`, { params: { topic } });
+      const attemptsResponse = await api.get(`/api/teach-it-back/${documentId}`, { params: { topic } });
       setAttempts(attemptsResponse.data.attempts || []);
     } catch (err) {
-      setError('The feedback service is unavailable right now. Please try again in a moment.');
+      setError(
+        err.response?.data?.detail ||
+        'The evaluation service is unavailable right now. Please try again in a moment.'
+      );
     } finally {
       setIsLoading(false);
     }
@@ -172,6 +164,9 @@ const TeachItBack = ({ documentId }) => {
           const _missing = Array.isArray(result.missing)
             ? result.missing
             : (result.missing ? [result.missing] : []);
+          const _conceptEvaluations = Array.isArray(result.concept_evaluations)
+            ? result.concept_evaluations
+            : [];
 
           let _modelAnswer = result.model_answer || '';
           let _result = { ...result, rights: _rights, wrongs: _wrongs, missing: _missing, model_answer: _modelAnswer };
@@ -233,6 +228,29 @@ const TeachItBack = ({ documentId }) => {
           </div>
           <p className="text-sm text-[#f4e5d6]">{_result.message}</p>
           <div className="space-y-2 text-sm">
+            {_conceptEvaluations.length > 0 && (
+              <div>
+                <h4 className="font-semibold text-[#f7cc9d]">PDF-grounded concept rubric</h4>
+                <div className="mt-2 space-y-2">
+                  {_conceptEvaluations.map((item) => (
+                    <div key={item.concept} className="rounded-lg border border-[#5f4635] p-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="font-medium text-[#f4e5d6]">{item.concept}</span>
+                        <span className="text-xs capitalize text-[#f7cc9d]">
+                          {item.status?.replaceAll('_', ' ')} · {item.importance} ({item.points_earned}/{item.weight})
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-[#d9c5b4]">{item.description}</p>
+                      <p className="mt-1 text-xs text-[#b89c86]">From your PDF: “{item.source_evidence}”</p>
+                      {item.student_evidence && (
+                        <p className="mt-1 text-xs text-[#b89c86]">Your explanation: “{item.student_evidence}”</p>
+                      )}
+                      {item.feedback && <p className="mt-1 text-xs text-[#d9c5b4]">{item.feedback}</p>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <div>
               <h4 className="font-semibold text-[#f7cc9d]">What you got right</h4>
               <ul className="mt-1 list-disc space-y-1 pl-5 text-[#d9c5b4]">
@@ -256,7 +274,6 @@ const TeachItBack = ({ documentId }) => {
               <p className="mt-1 text-[#d9c5b4]">{_result.model_answer}</p>
             </div>
           </div>
-          <FeedbackWidget featureType="teach_it_back" referenceId={documentId} />
         </div>
           );
         })()

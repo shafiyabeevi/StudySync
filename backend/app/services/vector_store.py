@@ -94,13 +94,9 @@ def delete_document_store(document_id: str):
     """Remove a document's vector store (cleanup)."""
     if document_id in _vector_stores:
         del _vector_stores[document_id]
-    # Remove physical persist directory if present
-    try:
-        settings = get_settings()
-        persist_dir = os.path.join(settings.CHROMA_PERSIST_DIR, document_id)
-        if os.path.exists(persist_dir):
-            import shutil
-            shutil.rmtree(persist_dir)
-            logger.info(f"Removed chroma persist dir for document {document_id}")
-    except Exception as e:
-        logger.warning(f"Failed to remove chroma persist dir for {document_id}: {e}")
+    settings = get_settings()
+    persist_dir = os.path.join(settings.CHROMA_PERSIST_DIR, document_id)
+    if os.path.exists(persist_dir):
+        import shutil
+        shutil.rmtree(persist_dir)
+        logger.info(f"Removed chroma persist dir for document {document_id}")

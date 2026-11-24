@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import axios from 'axios';
+import api from '../lib/api';
 import { UploadCloud, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 
 const FileUpload = ({ onUploadComplete }) => {
@@ -37,22 +37,9 @@ const FileUpload = ({ onUploadComplete }) => {
     formData.append('file', selectedFile);
 
     try {
-      // Try vite proxy first, fallback to direct backend URL
-      let response;
-      try {
-        response = await axios.post('/api/upload', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
-      } catch (proxyErr) {
-        if (!proxyErr.response) {
-          // Network error – proxy may not be available, try direct
-          response = await axios.post('http://127.0.0.1:8000/api/upload', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-          });
-        } else {
-          throw proxyErr;
-        }
-      }
+      await api.post('/api/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
       
       setUploadState({ status: 'success', message: 'Document processed successfully!' });
       

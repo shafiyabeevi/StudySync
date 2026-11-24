@@ -17,14 +17,11 @@ build/
 venv/
 env/
 
-# SQLite database
-*.db
-*.sqlite3
-
 # Local storage
 backend/storage/
 
 # ChromaDB vector store
+backend/chroma_data/
 backend/chroma_store/
 
 # Node / Frontend

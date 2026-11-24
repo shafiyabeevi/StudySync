@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../lib/api';
 import { ChevronLeft, FileText, Loader2 } from 'lucide-react';
 import ExamNotes from '../components/ExamNotes';
 import ChatWidget from '../components/ChatWidget';
-import FeedbackWidget from '../components/FeedbackWidget';
 
 const StudyPage = () => {
   const { id } = useParams();
@@ -13,9 +12,10 @@ const StudyPage = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    localStorage.setItem('studysync:selected-document', id);
     const fetchDocumentData = async () => {
       try {
-        const textResponse = await axios.get(`/api/documents/${id}/text`);
+        const textResponse = await api.get(`/api/documents/${id}/text`);
         setDocumentContent(textResponse.data);
       } catch (err) {
         console.error("Failed to load document text:", err);
@@ -87,10 +87,6 @@ const StudyPage = () => {
 
         {/* Floating Chat Widget */}
         <ChatWidget documentId={id} />
-      </div>
-
-      <div className="mt-4 flex justify-end">
-        <FeedbackWidget featureType="general" referenceId={null} />
       </div>
     </div>
   );

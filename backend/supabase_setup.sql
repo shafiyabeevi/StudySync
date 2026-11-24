@@ -1,69 +1,119 @@
--- ====================================================
--- AI Study Assistant Portal — Supabase Database Setup
--- Run this in the Supabase SQL Editor (Dashboard > SQL Editor)
--- ====================================================
+-- StudySync additive Supabase migration.
+-- Run manually in the Supabase SQL Editor after verifying the existing
+-- documents table has UUID id/user_id columns and owner-scoped RLS policies.
+-- This does not recreate documents/chat_history or change Storage policies.
 
--- 1. Documents table
-CREATE TABLE IF NOT EXISTS documents (
+BEGIN;
+
+CREATE TABLE IF NOT EXISTS public.teach_it_back_attempts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL DEFAULT '00000000-0000-0000-0000-000000000001',
-    filename TEXT NOT NULL,
-    file_path TEXT,
-    file_type TEXT NOT NULL CHECK (file_type IN ('pdf', 'docx')),
-    file_size BIGINT NOT NULL DEFAULT 0,
-    extracted_text TEXT,
-    exam_notes JSONB,
-    status TEXT NOT NULL DEFAULT 'uploading' CHECK (status IN ('uploading', 'processing', 'ready', 'error')),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- Index for efficient user queries
-CREATE INDEX IF NOT EXISTS idx_documents_user_id ON documents(user_id);
-CREATE INDEX IF NOT EXISTS idx_documents_status ON documents(status);
-
--- Auto-update the updated_at timestamp
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = now();
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-DROP TRIGGER IF EXISTS documents_updated_at ON documents;
-CREATE TRIGGER documents_updated_at
-    BEFORE UPDATE ON documents
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
--- 2. Chat history table
-CREATE TABLE IF NOT EXISTS chat_history (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL DEFAULT '00000000-0000-0000-0000-000000000001',
-    role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
-    content TEXT NOT NULL,
-    language TEXT DEFAULT 'en',
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    document_id UUID NOT NULL REFERENCES public.documents(id) ON DELETE CASCADE,
+    topic TEXT,
+    student_explanation TEXT NOT NULL,
+    ai_feedback JSONB,
+    score INTEGER,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_chat_history_document ON chat_history(document_id);
-CREATE INDEX IF NOT EXISTS idx_chat_history_user ON chat_history(user_id);
+CREATE INDEX IF NOT EXISTS idx_teach_it_back_user_document_created
+    ON public.teach_it_back_attempts (user_id, document_id, created_at DESC);
 
--- 3. Disable RLS for now (single-user mode)
--- When adding auth later, enable RLS and create policies:
---   ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
---   CREATE POLICY "Users can manage own documents"
---     ON documents FOR ALL USING (auth.uid() = user_id);
-ALTER TABLE documents DISABLE ROW LEVEL SECURITY;
-ALTER TABLE chat_history DISABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS idx_teach_it_back_document_topic_created
+    ON public.teach_it_back_attempts (document_id, topic, created_at DESC);
 
--- 4. Storage bucket (create via Dashboard > Storage > New Bucket)
--- Bucket name: study-documents
--- Public: No (private bucket)
--- File size limit: 20MB
--- NOTE: Storage buckets must be created via the Supabase Dashboard UI,
--- not via SQL. Create a bucket named "study-documents" with:
---   - Public access: OFF
---   - Max file size: 20971520 (20MB)
+ALTER TABLE public.teach_it_back_attempts ENABLE ROW LEVEL SECURITY;
+
+REVOKE ALL ON TABLE public.teach_it_back_attempts FROM anon;
+GRANT SELECT, INSERT, UPDATE, DELETE
+    ON TABLE public.teach_it_back_attempts TO authenticated;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'public'
+          AND tablename = 'teach_it_back_attempts'
+          AND policyname = 'teach_it_back_select_own'
+    ) THEN
+        CREATE POLICY teach_it_back_select_own
+            ON public.teach_it_back_attempts
+            FOR SELECT TO authenticated
+            USING (
+                user_id = (SELECT auth.uid())
+                AND EXISTS (
+                    SELECT 1 FROM public.documents d
+                    WHERE d.id = teach_it_back_attempts.document_id
+                      AND d.user_id = (SELECT auth.uid())
+                )
+            );
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'public'
+          AND tablename = 'teach_it_back_attempts'
+          AND policyname = 'teach_it_back_insert_own'
+    ) THEN
+        CREATE POLICY teach_it_back_insert_own
+            ON public.teach_it_back_attempts
+            FOR INSERT TO authenticated
+            WITH CHECK (
+                user_id = (SELECT auth.uid())
+                AND EXISTS (
+                    SELECT 1 FROM public.documents d
+                    WHERE d.id = teach_it_back_attempts.document_id
+                      AND d.user_id = (SELECT auth.uid())
+                )
+            );
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'public'
+          AND tablename = 'teach_it_back_attempts'
+          AND policyname = 'teach_it_back_update_own'
+    ) THEN
+        CREATE POLICY teach_it_back_update_own
+            ON public.teach_it_back_attempts
+            FOR UPDATE TO authenticated
+            USING (
+                user_id = (SELECT auth.uid())
+                AND EXISTS (
+                    SELECT 1 FROM public.documents d
+                    WHERE d.id = teach_it_back_attempts.document_id
+                      AND d.user_id = (SELECT auth.uid())
+                )
+            )
+            WITH CHECK (
+                user_id = (SELECT auth.uid())
+                AND EXISTS (
+                    SELECT 1 FROM public.documents d
+                    WHERE d.id = teach_it_back_attempts.document_id
+                      AND d.user_id = (SELECT auth.uid())
+                )
+            );
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'public'
+          AND tablename = 'teach_it_back_attempts'
+          AND policyname = 'teach_it_back_delete_own'
+    ) THEN
+        CREATE POLICY teach_it_back_delete_own
+            ON public.teach_it_back_attempts
+            FOR DELETE TO authenticated
+            USING (
+                user_id = (SELECT auth.uid())
+                AND EXISTS (
+                    SELECT 1 FROM public.documents d
+                    WHERE d.id = teach_it_back_attempts.document_id
+                      AND d.user_id = (SELECT auth.uid())
+                )
+            );
+    END IF;
+END
+$$;
+
+COMMIT;

@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import api from '../lib/api';
 import { useNavigate } from 'react-router-dom';
 import FileUpload from '../components/FileUpload';
-import { FileText, Loader2, ArrowRight, BrainCircuit } from 'lucide-react';
+import { FileText, Loader2, ArrowRight, BrainCircuit, Sparkles } from 'lucide-react';
 
 const DashboardPage = () => {
   const [documents, setDocuments] = useState([]);
@@ -15,16 +15,7 @@ const DashboardPage = () => {
   const fetchDocuments = useCallback(async () => {
     setIsLoading(true);
     try {
-      let response;
-      try {
-        response = await axios.get('/api/documents');
-      } catch (proxyErr) {
-        if (!proxyErr.response) {
-          response = await axios.get('http://127.0.0.1:8000/api/documents');
-        } else {
-          throw proxyErr;
-        }
-      }
+      const response = await api.get('/api/documents');
       setDocuments(response.data.documents || []);
     } catch (error) {
       console.error('Failed to load documents', error);
@@ -38,22 +29,8 @@ const DashboardPage = () => {
     e.preventDefault();
     setDeletingId(docId);
     try {
-      let deleted = false;
-      try {
-        await axios.delete(`/api/documents/${docId}`);
-        deleted = true;
-      } catch (proxyErr) {
-        if (!proxyErr.response) {
-          await axios.delete(`http://127.0.0.1:8000/api/documents/${docId}`);
-          deleted = true;
-        } else {
-          throw proxyErr;
-        }
-      }
-      if (deleted) {
-        // Remove only the deleted document from local state instantly
-        setDocuments(prev => prev.filter(d => d.id !== docId));
-      }
+      await api.delete(`/api/documents/${docId}`);
+      setDocuments(prev => prev.filter(d => d.id !== docId));
     } catch (err) {
       console.error('Failed to delete document', err);
       alert('Failed to delete document. See console for details.');
@@ -90,6 +67,29 @@ const DashboardPage = () => {
 
       <section>
         <FileUpload onUploadComplete={fetchDocuments} />
+      </section>
+
+      <section className="glass-panel flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-4">
+          <div className="rounded-xl bg-accent/15 p-3 text-accent">
+            <Sparkles className="h-6 w-6" />
+          </div>
+          <div>
+            <h2 className="text-xl font-semibold text-[#4a3b32]">Upgrade Me</h2>
+            <p className="mt-1 text-sm text-[#6a5347]">Explore a topic with a document-grounded flowchart and quiz.</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            const selected = localStorage.getItem('studysync:selected-document');
+            navigate(selected ? `/upgrade-me?document=${selected}` : '/upgrade-me');
+          }}
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+        >
+          Upgrade Me
+          <ArrowRight className="h-4 w-4" />
+        </button>
       </section>
 
       <section className="space-y-4">

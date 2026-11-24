@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import axios from 'axios';
+import api from '../lib/api';
 import { BookOpen, FileText, Sparkles, X } from 'lucide-react';
 import TeachItBack from './TeachItBack';
 
@@ -19,13 +19,7 @@ const TeachItBackModal = ({ isOpen, onClose, documentId }) => {
     const loadDocuments = async () => {
       try {
         setIsLoadingDocuments(true);
-        let response;
-        try {
-          response = await axios.get('/api/documents');
-        } catch (err) {
-          // Fallback to backend host if dev proxy isn't available
-          response = await axios.get('http://127.0.0.1:8000/api/documents');
-        }
+        const response = await api.get('/api/documents');
         setDocuments(response.data.documents || []);
       } catch (err) {
         console.error('Failed to load documents for Teach It Back', err);
