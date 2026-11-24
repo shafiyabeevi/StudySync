@@ -31,6 +31,7 @@ async def teach_it_back(
             supabase=supabase,
             user_id=user.id,
             document_id=document["id"],
+            extracted_text=document.get("extracted_text"),
             topic=request.topic,
             student_explanation=request.student_explanation,
         )

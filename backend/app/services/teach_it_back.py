@@ -296,10 +296,14 @@ async def evaluate_teach_it_back(
     document_id: str,
     topic: str,
     student_explanation: str,
+    extracted_text: str | None = None,
 ) -> dict:
     search_query = topic.strip() or student_explanation
     relevant_chunks = retrieve_relevant_chunks_with_ids(
-        document_id, search_query, top_k=MAX_SOURCE_CHUNKS
+        document_id,
+        search_query,
+        top_k=MAX_SOURCE_CHUNKS,
+        extracted_text=extracted_text,
     )
     context = "\n\n---\n\n".join(
         item["text"].strip()

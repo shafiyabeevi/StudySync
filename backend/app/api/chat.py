@@ -38,6 +38,7 @@ async def chat(
             raise HTTPException(status_code=404, detail="Document not found.")
         result = await chat_with_document(
             document_id=document["id"],
+            extracted_text=document.get("extracted_text"),
             user_message=request.message,
             chat_history=[msg.model_dump() for msg in request.chat_history],
         )

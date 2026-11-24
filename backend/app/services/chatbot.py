@@ -78,13 +78,19 @@ async def chat_with_document(
     document_id: str,
     user_message: str,
     chat_history: list[dict],
+    extracted_text: str | None = None,
 ) -> dict:
     """
     Process a chat message with RAG context from the document.
     Returns dict with 'response' and 'language'.
     """
     # Retrieve relevant chunks from the document
-    relevant_chunks = retrieve_relevant_chunks(document_id, user_message, top_k=5)
+    relevant_chunks = retrieve_relevant_chunks(
+        document_id,
+        user_message,
+        top_k=5,
+        extracted_text=extracted_text,
+    )
 
     if relevant_chunks:
         context = "\n\n---\n\n".join(relevant_chunks)

@@ -49,6 +49,7 @@ def _source_context(document: dict, topic: str) -> str:
         str(document["id"]),
         topic.strip(),
         top_k=15,
+        extracted_text=document.get("extracted_text"),
     )
     context = "\n\n---\n\n".join(
         str(item.get("text") or "").strip()

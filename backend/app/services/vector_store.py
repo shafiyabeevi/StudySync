@@ -3,15 +3,27 @@ ChromaDB vector store service.
 Handles embedding storage and retrieval for RAG.
 """
 import os
+import logging
+import threading
+
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_chroma import Chroma
 from app.core.config import get_settings
-import logging
+from app.services.chunker import chunk_text
 
 logger = logging.getLogger(__name__)
 
 _embedding_model = None
 _vector_stores: dict[str, Chroma] = {}
+_store_locks: dict[str, threading.RLock] = {}
+_store_locks_guard = threading.Lock()
+
+
+def _get_store_lock(document_id: str) -> threading.RLock:
+    with _store_locks_guard:
+        if document_id not in _store_locks:
+            _store_locks[document_id] = threading.RLock()
+        return _store_locks[document_id]
 
 
 def _get_embeddings() -> GoogleGenerativeAIEmbeddings:
@@ -59,21 +71,66 @@ def store_chunks(document_id: str, chunks: list[str]) -> int:
     return len(chunks)
 
 
-def retrieve_relevant_chunks(document_id: str, query: str, top_k: int = 5) -> list[str]:
+def ensure_document_store(document_id: str, extracted_text: str | None) -> bool:
+    """Ensure a document collection exists, rebuilding it from Supabase text if empty."""
+    if not document_id:
+        return False
+    text = str(extracted_text or "").strip()
+    if not text:
+        logger.warning("Cannot rebuild Chroma store for %s: extracted text is empty", document_id)
+        return False
+
+    lock = _get_store_lock(document_id)
+    with lock:
+        try:
+            store = _get_chroma_store(document_id)
+            if store.count() > 0:
+                return True
+
+            chunks = chunk_text(text)
+            if not chunks:
+                logger.warning("Cannot rebuild Chroma store for %s: chunking returned no chunks", document_id)
+                return False
+
+            num_stored = store_chunks(document_id, chunks)
+            if num_stored == 0:
+                return False
+            logger.info("Rebuilt Chroma store for document %s with %d chunks", document_id, num_stored)
+            return True
+        except Exception as exc:
+            logger.error("Failed to rebuild Chroma store for document %s: %s", document_id, exc)
+            return False
+
+
+def retrieve_relevant_chunks(
+    document_id: str,
+    query: str,
+    top_k: int = 5,
+    extracted_text: str | None = None,
+) -> list[str]:
     """
     Retrieve the most relevant chunks for a query from a document's collection.
     Returns a list of text chunks sorted by relevance.
     """
     try:
-        chunks_with_ids = retrieve_relevant_chunks_with_ids(document_id, query, top_k=top_k)
+        chunks_with_ids = retrieve_relevant_chunks_with_ids(
+            document_id, query, top_k=top_k, extracted_text=extracted_text
+        )
         return [item["text"] for item in chunks_with_ids]
     except Exception as e:
         logger.error(f"Retrieval error for document {document_id}: {e}")
         return []
 
 
-def retrieve_relevant_chunks_with_ids(document_id: str, query: str, top_k: int = 5) -> list[dict]:
+def retrieve_relevant_chunks_with_ids(
+    document_id: str,
+    query: str,
+    top_k: int = 5,
+    extracted_text: str | None = None,
+) -> list[dict]:
     """Retrieve relevant chunks and include lightweight metadata for downstream features."""
+    if extracted_text is not None:
+        ensure_document_store(document_id, extracted_text)
     store = _get_chroma_store(document_id)
 
     try:
